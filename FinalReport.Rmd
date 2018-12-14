@@ -1,0 +1,421 @@
+---
+title: "Analysis of Tronix token data"
+author: "Kavya Jampani,Beryl Mario Shairu Joseph Antony Bose"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Ethereum and ERC-20 tokens
+Ethereum was proposed by Vitalik Buterin, a cryptocurrency researcher and programmer.
+It is a distributed public blockchain framework which uses the block chain technology to create smart contracts to provide provide a static and consistent transactions record.   
+   
+Although commonly associated with bitcoin, there are significant technical differences between the two. There is a substantial difference in both in terms of purpose and capability. Ethereum enables developers to build and deploy any decentralized application whereas Bitcoin offers one particular application of blockchain technology i.e, a peer-to-peer electronic cash system that enables online bitcoin payments.  In Ethereum blockchain, miners work to earn Ether, a type of crypto token that fuels the network. Ethereum is also used a platform to launch other cryptocurrencies  
+  
+The benefits of the Ethereum decentralized platform are as follows:  
+Immutability - A third party cannot make any changes to the data.  
+Corruption and Tamper proof - Apps are based on a network formed around the principle of consensus, making censorship impossible.  
+Secure- With no central point of failure and secured with cryprography, applications on this framework are well protected against hacking attacks and fraudulent activities.  
+Zero downtime - Applications can never go down and can never be switched off.  
+
+Token:  
+In general sense, a token is used to describe any digital asset. They serve as the transaction units on the blockchains that are created using the standard templates like that of Ethereum network, where user can create his own tokens. 
+
+ERC-20 Tokens:  
+These are the tokens designed solely for the usage on Ethereum platform. ERC-20 is a technical standard used for smart contracts on the Ethereum blockchain for implementing tokens. It defines a common list of rules that an Ethereum token has to implement, giving developers the ability to program how new tokens will function within Ethereum ecosystem. According to Etherscan.io there are a total of 103621 of ERC-20 commpatible tokens found on Ethereum main network as of 07-26-2018. Because of ERC-20 token standard definition other developers can issue their own versions of the token and raise funds with an initial coin offering (ICO).     
+        Depending on its purpose, decentralized applications might use ERC-20 tokens to function as a currency, a share in a company or even proof of ownership. These tokens are created using smart contracts. ERC-20 makes the creation of new tokens extremely easy, and that is why Ethereum has become most popular platform for ICO's in 2017.  
+  
+###Primary Token  
+In our project we have considered Tronix token which is based on ERC-20 Ethereum standard.  
+About the token:   
+TRON Foundation was established in september 2017 by Justin Sun.TRX is the cryptographic currency developed by TRON,which aims to be a decentralized entertainment content sharing platform using blockchain and peer-to-peer network technology. In 2018 TRON launched its own proprietary blockchain, Mainnet to which it migrated all the TRX (ERC-20) tokens that previously circulated on the Ethereum blockchain. In February 2018, TRX was ranked 15th on the list of largest cryptocurrencies by market capitalization.TRON Foundation seeks to tackle the global entertainment industry â currently valued at $1 trillion. Bit-Z, Liqui, and Gatecoin are the next three biggest TRX exchanges.  
+  
+Major features of TRON are :  
+-Uncontrolled and free data  
+-Using content spreading, to enable content ecosystem, where  users ca obtain digital assets.  
+-Initial Coin Offering to distribute the digital assets   
+-Framework to allow distributed digital assets exchange (such as games) and market forecasting.  
+
+### Scope
+In this project, we examined the Ethereum dataset: Tronix(TRX). We have preprocessed the data removing the outliers where the transactions are impossible and then identified the distributions of number of user transactions by buyer and number of user transactions by the seller. Then we tried to find the correlation of the number of users made transactions on a specific date with the closing price on the same date.
+
+###Data Set
+The dataset we have considered has two files:   
+Token edge file which has 1,51,8537 transactions. This set has the row structure of "fromNodeID NodeID unixTime tokenAmount"" which implies that fromNodeId sold tokenAmount of the token to toNodeId at time unixTime. Each token has a total circulating amount and subunits. For our token the value is 100000000000 (according to coinmarketcap.com) and has 10e+06 subunits.   
+  
+Token price file which has 254 rows and the row structure is "Date Open High Low Close Volume MarketCap"" which provides the price data on a specific date. Open and Close are the prices of the token at the given date. Volume and MarketCap give total bought/sold tokens and market valuation at that date.  
+
+###Preprocessing the data
+Based on the total supply value of the tronix token, we have removed the outliers which are greater than totalAmount\*subunits. There are 65 transactions where the token amount is greater than the totalsupply\*subunits and 41 unique users are involved in these transactions.
+
+```{r echo=TRUE}
+df <- read.table("C:/Users/Administrator/Downloads/Stats_project/networktronixTx.txt", quote="\"", comment.char="")
+names(df) <- c("fromId","toId","time","tokenAmount")
+totalsupply <- 100000000000
+subunits <- 10e+06
+threshold <- totalsupply*subunits
+```
+
+
+###Distribution of how many times user buys a token
+To observe the behaviour of number of times user buys a token, we have derived frequencies for each user and then plotted the distribution of frequencies against user counts.As most of the data belongs to smaller frequencies, we have limited the set to see the behaviour of the dataset. For this we have considered the subset of data where user counts<= 600. This results in a set of 97% data excluding 10 outliers. We have used ggplot2 package of R for visualization.
+
+```{r echo=TRUE}
+library(ggplot2)
+library(dplyr)
+library(fitdistrplus)
+library(lubridate)
+```
+
+```{r echo=TRUE}
+data1 <- subset(df,df$tokenAmount <= threshold)
+df3 <- as.data.frame(table(data1$toId))
+names(df3) <- c("toId","freq")
+df3s <- as.data.frame(table(df3$freq))
+names(df3s) <- c("freq","nuser")
+df3s1 <- subset(df3s,df3s$nuser <= 600)
+barplot(df3s1$nuser,names.arg=df3s1$freq,xlab="Frequencies",ylab="count")
+
+```
+
+The parameters of the data are  
+Mean : `r mean(df3s1$nuser)`   
+Median : `r median(df3s1$nuser)`  
+Variance : `r var(df3s1$nuser)`  
+Standard Devation : `r sd(df3s1$nuser)`  
+
+'Cullen and Frey Graph' gives the summary of best distributions that can fit the data From the below graph, we can see that normal,negative binomial and poisson distributions fit the data better. We have used 'fitdistrplus' package of R for the data visualization.
+
+
+```{r echo=TRUE}
+descdist(df3s1$nuser, discrete = TRUE, boot = 100)
+```
+
+
+Cumulative Distribution Function (CDFs) have most meaning for visualizing the discrete fits. The CDFs of the above distributions are as follows.
+
+```{r echo=TRUE}
+f1n <- fitdist(df3s1$nuser,"nbinom")
+f2n <- fitdist(df3s1$nuser,"pois")
+f3n <- fitdist(df3s1$nuser,"norm")
+plot.legend <- c("nbinom","pois","norm")
+cdfcomp(list(f1n,f2n,f3n), legendtext = plot.legend)
+```
+
+The Goodness-of-fit criteria is calculated by using the gofstat() function in R.
+
+```{r echo=TRUE}
+gofstat(list(f1n, f2n,f3n))
+```
+
+The AIC and BIC count are minimum for the negative binomial distribution.So, we can say that negative binomial distribution fits the data better.The estimated parameter of the distribution is as follows
+
+```{r echo=TRUE}
+f1n
+```
+
+Modelling negative binomial:  
+We can see the estimated mean is same as the mean we got from the sample. The probability of success can be calculated by   
+p = size/mu =  0.032  
+standard deviation = size(1-p)/p^2 = 19.76
+
+##Distribution of how many times user sells the data
+To observe the behaviour of number of times user sells a token, we have derived frequencies for each user and then plotted the distribution of frequencies against user counts.As most of the data belongs to smaller frequencies, we have limited the set to see the behaviour of the dataset. For this we have considered the subset of data where user counts<= 100. This results in a set of 99.4% data excluding 2 outliers. 
+
+```{r echo=TRUE}
+df4 <- as.data.frame(table(data1$fromId))
+names(df4) <- c("fromId","freq")
+df4s <- as.data.frame(table(df4$freq))
+names(df4s) <- c("freq","nuser")
+df4s$freq<-as.numeric(as.character(df4s$freq))
+df4s1 <- subset(df4s,df4s$nuser <= 100)
+barplot(df4s1$nuser,names.arg=df4s1$freq,xlab="Frequencies",ylab="count")
+```
+
+The parameters of the data are
+
+Mean : `r mean(df4s1$nuser)`
+
+Median : `r median(df4s1$nuser)`
+
+Variance : `r var(df4s1$nuser)`
+
+Standard Devation : `r sd(df4s1$nuser)`
+
+From the below graph, we can see that negative binomial,normal and poisson distributions fit the data better.
+
+```{r echo=TRUE}
+descdist(df4s1$nuser, discrete = TRUE, boot = 100)
+```
+
+
+From above graph, we see that negative binomial and poisson fits better than the normal distribution. However, from the Histogram we can see that there is a possibility for exponential distribution as well.So, we have plotted the CDFs of negative binomial, poisson and normal distributions.
+
+```{r echo=TRUE}
+f1n <- fitdist(df4s1$nuser,"nbinom",discrete=TRUE)
+f2n <- fitdist(df4s1$nuser,"pois",discrete=TRUE)
+f3n <- fitdist(df4s1$nuser,"exp",discrete=TRUE)
+plot.legend <- c("nbinom","pois","exp")
+cdfcomp(list(f1n,f2n,f3n), legendtext = plot.legend)
+```
+
+The Goodness-of-fit criteria results are:
+```{r echo=TRUE}
+gofstat(list(f1n, f2n,f3n))
+```
+
+The AIC and BIC count are minimum for the exponential distribution.So, we can say that exponential distribution fits the data better.
+
+```{r echo=FALSE}
+f3n
+```
+
+The mean and standard deviation of the estimated exponential distribution are 
+mean = 5.024305
+variance = 5.024305 
+
+##Correlation of number of users and price on a specific date 
+
+  To find the behaviour of number of users doing transactions on a particular date, we have plotted the graph of number of users against date.
+
+```{r echo=TRUE}
+data1["date"] = as.Date(as.POSIXct(as.numeric(as.character(data1$time)),origin="1970-01-01",tz="GMT"))
+dg <- group_by(data1,date)
+data_grp <- tally(dg)
+names(data_grp) <- c("date","freq")
+ggplot(data = data_grp, aes(x = date, y = freq)) +
+      geom_bar(stat = "identity", fill = "purple") +
+      labs(title = "number of transactions",x = "Date", y = "frequency")
+
+```
+
+The following is the barplot with date on the x axis and price on y axis. The price behaviour of the tronix token can be observed from the following plot:
+
+```{r echo=TRUE}
+pricedata <- read.table("C:/Users/Administrator/Downloads/Stats_project/Tronix.txt",sep="\t",comment.char="",header=TRUE)
+pricedata["date1"] <- as.Date(parse_date_time(pricedata$Date,"mdy"))
+ggplot(data = pricedata, aes(x = date1, y = Close)) +
+      geom_bar(stat = "identity", fill = "purple") +
+      labs(title = "price graph",x = "Date", y = "price")
+```
+
+We have merged the grouped data and the pricedata on date and we have obtained the correlation value of 0.14(approximate) for the number of transactions on a date and the closing price of the date.
+
+The correlation function is calculated using the cor() function from lubridate package in R.
+
+```{r echo=TRUE}
+merge_data = merge(x=data_grp,y=pricedata,by.x="date",by.y="date1")
+cor(merge_data$freq,merge_data$Close,method="pearson")
+head(merge_data,30)
+```
+
+To find the correlation for different layers of data, we have divided the dataset into 11 layers and the correlation values for each of the layer are as follows
+
+```{r echo=TRUE}
+x <- 1.373e+05 
+y <- 1
+a <- 0
+i <- 1
+while(x <= 1.000e+16)
+{
+  dfp <- subset(data1, data1$tokenAmount < x & data1$tokenAmount > y)
+  dg <- group_by(dfp,date)
+  data_grp <- tally(dg)
+  names(data_grp) <- c("date","freq")
+  merge_data = merge(x=data_grp,y=pricedata,by.x="date",by.y="date1")
+  a[i] <- cor(merge_data$freq,merge_data$Close,method="pearson")
+  message("The correlation value of layer ",i," is : ",a[i])
+  y <- x
+  x <- x*10
+  i <- i+1
+}
+```
+
+We see that layer 5 has maximum correlation with value 0.894(approximate). In this layer there are 126504 transactions and the p-value is 2.2e-16 which is very less indicating that correlation value is different from 0. The maximum correlation value is 0.894(approximate) which is higher than the Standard Statistic Correlation co-efficient Value of 0.5 and more. Inspite of the time span of the tokens being 9 months (2017-08-29 to 2018-05-06), due to the transactions being spread out, it gives a relatively high correlation, hence denotes a strong positive Linear relationship between the variables being - the number of users and price on a specific date. Since the relationship is known to be linear, or the observed pattern etween the two variables appears to be linear, then the correlation coefficient of 0.894  provides a reliable measure of the strength of the linear relationship.  This justifies the number (11) we have chosen to obtain layers, which is to maximize correlation, and have achieved the purpose of layering the data in that pattern. The results of using the Pearson correlation are as follows:
+
+```{r echo=TRUE}
+  dfp <- subset(data1, data1$tokenAmount < 1.373e+09 & data1$tokenAmount > 137300000)
+  dg <- group_by(dfp,date)
+  data_grp <- tally(dg)
+  names(data_grp) <- c("date","freq")
+  merge_data = merge(x=data_grp,y=pricedata,by.x="date",by.y="date1")
+  cor.test(merge_data$freq,merge_data$Close,method="pearson")
+```
+
+From below, we can see that the number of transactions and price plot follows normal distribution the mean and standard deviation parameters obtained from fitting ditribution are same as sample. So the picking of "Pearson" test is also justified and there is not a very notable deviation from the other method "Spearman".
+
+```{r echo=TRUE}
+barplot(merge_data$freq,merge_data$Close,xlab="Frequencies",ylab="price")
+f3n <- fitdistr(merge_data$freq,"normal")
+f3n
+```
+
+###Multiple Linear regression Model for the Simple price return
+
+
+The following is the plot of the growth and the price return. The correlation value is 0.213.
+```{r echo=TRUE}
+#Function to shift
+shift <- function(x, n){
+  c(x[-(seq(n))], rep(NA, n))
+}
+library('useful')
+library('lubridate')
+library('data.table')
+## pricereturn and growth in a previous day
+pricedata <- read.table("C:/Users/Administrator/Downloads/Stats_project/Tronix.txt",sep="\t",comment.char="",header=TRUE)
+pricedata["date1"] <- as.Date(parse_date_time(pricedata$Date,"mdy"))
+#pricedata <- pricedata[order(pricedata$date1), ]
+#pd <- shift.column(data=pricedata,columns=c("Market.Cap","Open","High","Low"),up=FALSE)
+#pd <- subset(pd,pd$date1 >= as.Date("2017-09-30"))
+#sub1 <- gsub(",","",pd$Market.Cap.Shifted)
+#pd["market_diff"] = as.numeric(as.character(sub1))/pd$High.Shifted
+#pd["pricereturn"] = (pd$Open-pd$Open.Shifted)/(pd$Open.Shifted)
+#pd["growth"] = (pd$High.Shifted-pd$Low.Shifted)
+pd <- subset(pricedata,pricedata$date1 >= as.Date("2017-09-30"))
+pd["close_price1"] <- shift(pd$Close,1)
+pd["open_price1"] <- shift(pd$Open,1)
+pd["pricereturn"] = (pd$Open-pd$open_price1)/(pd$open_price1)
+scatter.smooth(x=pd$close_price1,y=pd$pricereturn)
+cor(pd$close_price1,pd$pricereturn,method="pearson")
+```
+
+
+
+```{r echo=TRUE}
+scatter.smooth(x=pd$growth, y=pd$pricereturn, main="Growth~SimplePrice",xlab="Growth",ylab="SimplePrice")
+cor(pd$growth,pd$pricereturn,method="pearson")
+```
+
+The following is the plot of the market value and the price return. The correlation value is -0.532. This shows that price return is negatively correlated to marketvalue/highprice.
+```{r echo=TRUE}
+scatter.smooth(x=pd$market_diff, y=pd$pricereturn, main="MarketValue~SimplePrice", xlab="MarketValue", ylab="SimplePrice")
+cor(pd$market_diff,pd$pricereturn,method="pearson")
+```
+We have plotted the graph between the number of users buying the tokens on the previous day and the price return value and the plot is shown below. The correlation value here is 0.112.
+
+```{r echo=TRUE}
+## price and number of unique users buying in a previous day transactions
+require(data.table)
+data1 <- subset(df, df$tokenAmount < 1.373e+09 & df$tokenAmount > 137300000)
+data1["date"] = as.Date(as.POSIXct(as.numeric(as.character(data1$time)),origin="1970-01-01",tz="GMT"))
+ans = as.data.table(data1)[, count := uniqueN(toId), by = date]
+merge_data = merge(x=ans,y=pricedata,by.x="date",by.y="date1")
+merge_d <- unique(subset(merge_data, select = c("date","count","Open","High","Low","Close")))
+merge_d <- as.data.frame(shift.column(data=merge_d,columns=c("count","Open"),up=FALSE))
+merge_d["pricereturn"] <- (merge_d$Open-merge_d$Open.Shifted)/merge_d$Open.Shifted
+scatter.smooth(x=merge_d$count.Shifted, y=merge_d$pricereturn, main="Count~PriceReturn",xlab="Count",ylab="PriceReturn")
+cor(merge_d$count.Shifted,merge_d$pricereturn,method="pearson")
+```
+
+The multiple regression is modelled using lm() function in R. The summary of the linear model is as follows:
+```{r echo=TRUE}
+finaldata <- merge(x=merge_d,y=pd,by.x="date",by.y="date1")
+head(finaldata,5)
+final_data <- subset(finaldata,select=c("date","growth","market_diff","pricereturn.y","count.Shifted"))
+linearMod  <- lm(pricereturn.y ~ market_diff+growth+count.Shifted,data = final_data)
+summary(linearMod)
+```
+
+```{r echo=TRUE}
+AIC(linearMod)
+BIC(linearMod)
+```
+
+```{r echo=TRUE}
+par(mfrow=c(2,2))
+plot(linearMod)
+```
+From the P values we can see that market_diff is significant. The null hypotheses is that the coefficients associated with the variables is equal to zero. The alternate hypothesis is that the coefficients are not equal to zero i.e, there exists a relationship between the independent variable in question and the dependent variable. The larger t value indicates that it is less likely that the coefficient is not equal to zero purely by chance. So, higher the t-value, the better. Pr(>|t|) or p-value is the probability that you get a t-value as high or higher than the observed value when the Null Hypothesis is true. So if the Pr(>|t|) is low, the coefficients are significant (significantly different from zero). If the Pr(>|t|) is high, the coefficients are not significant. When p Value is less than significance level (< 0.05), we can safely reject the null hypothesis that the co-efficients of the predictor is zero. In our model, market_diff and count features have values < 0.05.
+The R-squared value of the model is 0.29 and the adjusted R squared value is 0.28.  These values can be greater for a better model. However, we can see that only two features are contributing to the model, the values are less. The Akaike information criterion(AIC) and Bayesian information criterion(BIC) values are -187.228 and -170.28 respectively for the model. The model with lower values is preferred. 
+
+
+
+###Multiple linear regression model for open price
+
+```{r echo=TRUE}
+
+#layer1
+data1 <- subset(df, df$tokenAmount < 1.373e+09 & df$tokenAmount > 137300000)
+data1["date"] = as.Date(as.POSIXct(as.numeric(as.character(data1$time)),origin="1970-01-01",tz="GMT"))
+```
+
+The following is the plot showing the relationship between number of transactions on a previous date and opening price. These two features have a correlation of 0.90
+
+```{r echo=TRUE}
+## price and number of transactions in a previous day
+library('dplyr')
+dg <- group_by(data1,date)
+data_grp <- tally(dg)
+names(data_grp) <- c("date","freq")
+pricedata <- read.table("C:/Users/Administrator/Downloads/Stats_project/Tronix.txt",sep="\t",comment.char="",header=TRUE)
+pricedata["date1"] <- as.Date(parse_date_time(pricedata$Date,"mdy"))
+data_new <- shift.column(data=data_grp,columns="freq",up=FALSE)
+names(data_new) <- c("date","freq","prev_freq")
+merge_data = merge(x=data_new,y=pricedata,by.x="date",by.y="date1")
+merge_data1 = subset(merge_data,merge_data$prev_freq <= 10000)
+scatter.smooth(x=merge_data1$prev_freq, y=merge_data1$High, main="freq~price",xlab="freq",ylab="openprice")
+cor(merge_data1$prev_freq,merge_data1$Open,method="pearson")
+```
+
+We have plotted the graph between the number of unique users and buyers on previous date and the correlation value obtained for them is 0.912
+```{r echo=TRUE}
+## price and number of unique users selling/buying in a previous day transactions
+require(data.table)
+ans = as.data.table(data1)[, count := uniqueN(c(fromId,toId)), by = date]
+merge_data = merge(x=ans,y=pricedata,by.x="date",by.y="date1")
+merge_d <- unique(subset(merge_data, select = c("date","count","Open","High","Low","Close")))
+merge_d <- subset(merge_d,merge_d$count<5000)
+merge_d <- shift.column(data=merge_d,columns="count",up=FALSE)
+scatter.smooth(x=merge_d$count.Shifted, y=merge_d$Open, main="users~price",xlab="users",ylab="openprice")
+cor(merge_d$count.Shifted,merge_d$Open,method="pearson")
+```
+The plot shows the relationship between volume of the token on previous date and the opening price. The correlation value of these two variables is 0.85
+
+```{r echo=TRUE}
+pd <- pricedata[order(pricedata$date1), ]
+pd <- shift.column(data=pd,columns="Volume",up=FALSE)
+pd$Volume.Shifted <- gsub(",","",pd$Volume.Shifted)
+pd$Volume.Shifted <- as.numeric(as.character(pd$Volume.Shifted))
+scatter.smooth(x=pd$Volume.Shifted, y=pd$Open, main="Volume~price",xlab="volume",ylab="openprice")
+cor(pd$Volume.Shifted,pd$Open,method="pearson")
+```
+
+The multiple regression is modelled using lm() function in R. The summary of the linear model is as follows:
+
+
+```{r echo=TRUE}
+finaldata <- merge(x=merge_d,y=merge_data1,by.x="date",by.y="date")
+finaldata <- subset(finaldata,select=c("date","count.Shifted","Open.x","prev_freq"))
+final_data <- merge(x=finaldata,y=pd,by.x="date",by.y="date1")
+final_data <- subset(final_data,select=c("date","count.Shifted","Open.x","prev_freq","Volume.Shifted"))
+names(final_data) <- c("Date","Prev_Count","Open_Price","Prev_Freq","Prev_Volume")
+linearMod  <- lm(Open_Price ~ Prev_Count+Prev_Freq+Prev_Volume,data = final_data)
+summary(linearMod)
+AIC(linearMod)
+BIC(linearMod)
+```
+```{r echo=TRUE}
+par(mfrow=c(2,2))
+plot(linearMod)
+```
+In contrast to the previous model, we can see that all the features in this model are significant with high |t| values and less pr(>|t|) values. The R-squared value is 0.8856 and Adjusted R squared value is 0.8852 which are significant.
+The AIC and BIC values of this model are also very less. Therefore, this model can be used in predicting the open price.
+
+
+### Conclusion
+Based on the data analysis performed, we found that distribution of number of user buys follows negative binomial distribution and  number of times user sells follows exponential distribution. From the layers of the data created, we have found that in layer5 the number of users have strong correlation with price data. The value of 0.89 shows the high correlation value, where the value usually ranges from -1 to 1. We have created a multiple linear regression model on the layer which has 126504 transactions using the features which has maximum correlation with the simple price return and analyzed the results.
+
+
+### References
+https://en.wikipedia.org/wiki/Ethereum
+https://blockgeeks.com/guides/what-is-ethereum/  
+https://blog.coindirect.com/coin-profile-tron-tronix-trx/  
+https://developers.tron.network/docs/getting-started  
+https://www.inverse.com/article/39961-tron-trx-cryptocurrency-ripple-bitcoin
+https://blockonomi.com/tron-trx-guide/
+
+
